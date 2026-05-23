@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket4Me — Live Events, Your Way</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f2ee;
+    --cream: #ede9e3;
+    --accent: #e8441a;
+    --accent2: #f5a623;
+    --gray: #6b6560;
+    --card-bg: #141414;
+    --border: rgba(245,242,238,0.1);
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; overflow-x: hidden; }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; background: rgba(10,10,10,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--white); text-decoration: none; }
+  .logo span { color: var(--accent); }
+  nav a.nav-link { color: var(--gray); text-decoration: none; font-size: 14px; font-weight: 400; transition: color 0.2s; }
+  nav a.nav-link:hover { color: var(--white); }
+  .nav-right { display: flex; gap: 32px; align-items: center; }
+  .nav-btn { background: var(--accent); color: var(--white); border: none; padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; text-decoration: none; display: inline-block; }
+  .nav-btn:hover { background: #c93a16; transform: translateY(-1px); }
+
+  /* HERO */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 48px 80px; position: relative; overflow: hidden; }
+  .hero-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(245,242,238,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,242,238,0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+  .hero-glow { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(232,68,26,0.15) 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -60%); pointer-events: none; }
+  .hero-tag { display: inline-block; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; padding: 6px 16px; margin-bottom: 32px; opacity: 0; animation: fadeUp 0.6s 0.2s forwards; }
+  .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(72px, 12vw, 140px); line-height: 0.92; letter-spacing: 2px; margin-bottom: 28px; opacity: 0; animation: fadeUp 0.6s 0.35s forwards; }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p { font-size: 18px; color: var(--gray); max-width: 480px; line-height: 1.7; margin-bottom: 56px; opacity: 0; animation: fadeUp 0.6s 0.5s forwards; }
+  .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; opacity: 0; animation: fadeUp 0.6s 0.65s forwards; }
+  .btn-primary { background: var(--accent); color: var(--white); padding: 16px 40px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; border: none; cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-block; letter-spacing: 0.5px; }
+  .btn-primary:hover { background: #c93a16; transform: translateY(-2px); }
+  .btn-secondary { background: transparent; color: var(--white); padding: 16px 40px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; letter-spacing: 0.5px; }
+  .btn-secondary:hover { border-color: rgba(245,242,238,0.4); transform: translateY(-2px); }
+
+  /* MARQUEE */
+  .marquee-wrap { overflow: hidden; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 14px 0; background: var(--card-bg); }
+  .marquee { display: flex; gap: 60px; animation: marquee 25s linear infinite; white-space: nowrap; width: max-content; }
+  .marquee span { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 3px; color: var(--gray); }
+  .marquee span.dot { color: var(--accent); }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* SECTION */
+  section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
+  .section-tag { font-size: 11px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; display: block; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(42px, 6vw, 72px); line-height: 1; letter-spacing: 1px; margin-bottom: 16px; }
+  .section-sub { font-size: 16px; color: var(--gray); max-width: 500px; line-height: 1.7; margin-bottom: 60px; }
+
+  /* PATH CARDS */
+  .path-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--border); }
+  .path-card { background: var(--card-bg); padding: 56px 48px; position: relative; overflow: hidden; transition: background 0.3s; cursor: pointer; }
+  .path-card:hover { background: #1c1c1c; }
+  .path-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.3s; }
+  .path-card:hover::before { transform: scaleX(1); }
+  .path-card.venue::before { background: var(--accent2); }
+  .path-number { font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: rgba(245,242,238,0.05); position: absolute; top: 20px; right: 32px; line-height: 1; pointer-events: none; }
+  .path-icon { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 28px; font-size: 22px; }
+  .path-card h3 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 1px; margin-bottom: 14px; }
+  .path-card p { font-size: 15px; color: var(--gray); line-height: 1.7; margin-bottom: 36px; max-width: 340px; }
+  .path-features { list-style: none; margin-bottom: 40px; }
+  .path-features li { font-size: 13px; color: rgba(245,242,238,0.6); padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .path-features li::before { content: '→'; color: var(--accent); font-size: 12px; flex-shrink: 0; }
+  .path-card.venue .path-features li::before { color: var(--accent2); }
+
+  /* FEATURES */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+  .feature { background: var(--card-bg); padding: 40px 36px; }
+  .feature-num { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 3px; color: var(--accent); margin-bottom: 20px; display: block; }
+  .feature h4 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; margin-bottom: 12px; }
+  .feature p { font-size: 14px; color: var(--gray); line-height: 1.7; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(10,10,10,0.92); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .modal-overlay.active { opacity: 1; pointer-events: all; }
+  .modal { background: #141414; border: 1px solid var(--border); width: 100%; max-width: 460px; padding: 48px; transform: translateY(20px); transition: transform 0.25s; position: relative; max-height: 90vh; overflow-y: auto; }
+  .modal-overlay.active .modal { transform: translateY(0); }
+  .modal-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--gray); font-size: 22px; cursor: pointer; line-height: 1; transition: color 0.2s; }
+  .modal-close:hover { color: var(--white); }
+  .modal-tag { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 500; margin-bottom: 12px; display: block; }
+  .modal-tag.venue-tag { color: var(--accent2); }
+  .modal h2 { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 1px; margin-bottom: 32px; line-height: 1; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray); margin-bottom: 8px; font-weight: 500; }
+  .form-group input, .form-group select { width: 100%; background: #0a0a0a; border: 1px solid var(--border); color: var(--white); padding: 13px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; appearance: none; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: rgba(245,242,238,0.2); }
+  .form-group select option { background: #141414; }
+  .modal-divider { display: flex; align-items: center; gap: 16px; margin: 24px 0; }
+  .modal-divider::before, .modal-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .modal-divider span { font-size: 12px; color: var(--gray); }
+  .modal-switch { font-size: 13px; color: var(--gray); text-align: center; margin-top: 20px; }
+  .modal-switch a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .modal-switch a:hover { text-decoration: underline; }
+  .form-submit { width: 100%; background: var(--accent); color: var(--white); border: none; padding: 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: 0.5px; transition: background 0.2s, transform 0.15s; margin-top: 8px; }
+  .form-submit:hover { background: #c93a16; transform: translateY(-1px); }
+  .form-submit:disabled { background: #555; cursor: not-allowed; transform: none; }
+  .form-submit.venue-submit { background: var(--accent2); color: var(--black); }
+  .form-submit.venue-submit:hover { background: #d4921e; }
+  .form-submit.venue-submit:disabled { background: #555; color: var(--white); }
+
+  /* VENUE TIER PICKER */
+  .tier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .tier-card { border: 1px solid var(--border); padding: 24px 20px; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+  .tier-card:hover { border-color: rgba(245,242,238,0.3); background: #1a1a1a; }
+  .tier-card.selected { border-color: var(--accent2); background: rgba(245,166,35,0.06); }
+  .tier-card h4 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; margin-bottom: 8px; }
+  .tier-card p { font-size: 12px; color: var(--gray); line-height: 1.6; }
+  .tier-check { position: absolute; top: 12px; right: 12px; width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .tier-card.selected .tier-check { background: var(--accent2); border-color: var(--accent2); color: var(--black); }
+
+  /* ALERT */
+  .alert { padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .alert.error { background: rgba(232,68,26,0.15); border: 1px solid rgba(232,68,26,0.4); color: #ff8a6a; }
+  .alert.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+  .alert.show { display: block; }
+
+  /* SUCCESS STATE */
+  .success-screen { text-align: center; padding: 20px 0; display: none; }
+  .success-screen.show { display: block; }
+  .success-icon { font-size: 48px; margin-bottom: 20px; }
+  .success-screen h3 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; margin-bottom: 12px; }
+  .success-screen p { font-size: 14px; color: var(--gray); line-height: 1.7; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+  footer p { font-size: 13px; color: var(--gray); }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-links a { font-size: 13px; color: var(--gray); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--white); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .hero { padding: 100px 24px 60px; }
+    section { padding: 60px 24px; }
+    .path-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .hero-btns { flex-direction: column; align-items: center; }
+    footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; }
+    .path-card { padding: 40px 28px; }
+    .modal { padding: 36px 28px; }
+    .tier-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">T4<span>M</span></a>
+  <div class="nav-right">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#" class="nav-link" onclick="openModal('login'); return false;">Sign in</a>
+    <a href="#" class="nav-btn" onclick="openModal('buyer'); return false;">Get tickets</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <span class="hero-tag">US Events Platform</span>
+  <h1>Your ticket<br>to <em>everything</em></h1>
+  <p>T4M connects fans to live events and gives venues the tools to sell tickets without the hassle.</p>
+  <div class="hero-btns">
+    <a href="#join" class="btn-primary">Find events</a>
+    <a href="#join" class="btn-secondary">List your venue →</a>
+  </div>
+</div>
+
+<div class="marquee-wrap">
+  <div class="marquee">
+    <span>CONCERTS</span><span class="dot">✦</span>
+    <span>FESTIVALS</span><span class="dot">✦</span>
+    <span>COMEDY</span><span class="dot">✦</span>
+    <span>SPORTS</span><span class="dot">✦</span>
+    <span>THEATRE</span><span class="dot">✦</span>
+    <span>CLUB NIGHTS</span><span class="dot">✦</span>
+    <span>POP-UPS</span><span class="dot">✦</span>
+    <span>OPEN MIC</span><span class="dot">✦</span>
+    <span>CONCERTS</span><span class="dot">✦</span>
+    <span>FESTIVALS</span><span class="dot">✦</span>
+    <span>COMEDY</span><span class="dot">✦</span>
+    <span>SPORTS</span><span class="dot">✦</span>
+    <span>THEATRE</span><span class="dot">✦</span>
+    <span>CLUB NIGHTS</span><span class="dot">✦</span>
+    <span>POP-UPS</span><span class="dot">✦</span>
+    <span>OPEN MIC</span><span class="dot">✦</span>
+  </div>
+</div>
+
+<section id="join">
+  <span class="section-tag">Get started</span>
+  <h2 class="section-title">Choose your path</h2>
+  <p class="section-sub">Whether you're here to discover events or sell them, T4M has you covered.</p>
+  <div class="path-grid">
+    <div class="path-card" onclick="openModal('buyer')">
+      <div class="path-number">01</div>
+      <div class="path-icon">🎟</div>
+      <h3>I'm a fan</h3>
+      <p>Find and buy tickets to events near you. Your tickets live in your T4M account — no print-outs needed.</p>
+      <ul class="path-features">
+        <li>Browse events by city, genre, or date</li>
+        <li>Secure account-bound tickets</li>
+        <li>Digital entry via T4M app</li>
+        <li>Safe resale at capped prices</li>
+      </ul>
+      <button class="btn-primary" onclick="openModal('buyer'); event.stopPropagation();">Sign up as a fan</button>
+    </div>
+    <div class="path-card venue" onclick="openModal('venue')">
+      <div class="path-number">02</div>
+      <div class="path-icon">🏟</div>
+      <h3>I'm a venue</h3>
+      <p>List events, manage tickets, run presales, and scan guests at the door — all from one dashboard.</p>
+      <ul class="path-features">
+        <li>Create events with custom seating</li>
+        <li>Presale codes for fans</li>
+        <li>Real-time sales dashboard</li>
+        <li>Door scanner app included</li>
+      </ul>
+      <button class="btn-primary" style="background:var(--accent2); color: var(--black);" onclick="openModal('venue'); event.stopPropagation();">Sign up as a venue</button>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <span class="section-tag">Why T4M</span>
+  <h2 class="section-title">Built different</h2>
+  <p class="section-sub">No hidden fees. No bots. No nonsense.</p>
+  <div class="features-grid">
+    <div class="feature"><span class="feature-num">01</span><h4>Account-bound tickets</h4><p>Every ticket is tied to a verified T4M account. No screenshots, no fakes, no resale on shady third-party sites.</p></div>
+    <div class="feature"><span class="feature-num">02</span><h4>Fair resale cap</h4><p>Resale is allowed on T4M only, capped at 75% above face value. Fans get fair prices, sellers still make a profit.</p></div>
+    <div class="feature"><span class="feature-num">03</span><h4>Presale codes</h4><p>Venues and artists can issue exclusive presale codes to fan clubs, newsletter subscribers, or loyal buyers.</p></div>
+    <div class="feature"><span class="feature-num">04</span><h4>Pro + Indie venues</h4><p>Pro venues get the full CTS dashboard and scanner. Indie venues get simple, free tools to get started fast.</p></div>
+    <div class="feature"><span class="feature-num">05</span><h4>Instant payouts</h4><p>Venues receive payouts via Stripe within 2 business days of an event selling out or going live.</p></div>
+    <div class="feature"><span class="feature-num">06</span><h4>US-first platform</h4><p>Built specifically for the US market. No international clutter — just clean, fast ticketing for American events.</p></div>
+  </div>
+</section>
+
+<footer>
+  <a href="#" class="logo" style="font-size:22px;">T4<span>M</span></a>
+  <p>© 2025 Ticket4Me. All rights reserved.</p>
+  <div class="footer-links">
+    <a href="#">Terms</a>
+    <a href="#">Privacy</a>
+    <a href="#">Contact</a>
+    <a href="#" onclick="openModal('venue'); return false;">List a venue</a>
+  </div>
+</footer>
+
+<!-- FAN SIGNUP MODAL -->
+<div class="modal-overlay" id="modal-buyer">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('buyer')">✕</button>
+    <div id="buyer-form-wrap">
+      <span class="modal-tag">Fan account</span>
+      <h2>Get your tickets</h2>
+      <div class="alert error" id="buyer-error"></div>
+      <div class="form-group"><label>Full name</label><input type="text" id="buyer-name" placeholder="Jane Smith"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="buyer-email" placeholder="jane@email.com"></div>
+      <div class="form-group"><label>Phone number <span style="color:var(--gray); font-size:10px; letter-spacing:1px;">(optional)</span></label><input type="tel" id="buyer-phone" placeholder="+1 (555) 000-0000"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="buyer-password" placeholder="••••••••"></div>
+      <button class="form-submit" id="buyer-submit" onclick="signUpFan()">Create fan account →</button>
+      <div class="modal-divider"><span>or</span></div>
+      <div class="modal-switch">Are you a venue? <a onclick="switchModal('buyer','venue')">Sign up as a venue instead</a></div>
+    </div>
+    <div class="success-screen" id="buyer-success">
+      <div class="success-icon">🎟</div>
+      <h3>You're in!</h3>
+      <p>Welcome to T4M. Check your email to confirm your account, then you're ready to grab tickets.</p>
+    </div>
+  </div>
+</div>
+
+<!-- VENUE SIGNUP MODAL -->
+<div class="modal-overlay" id="modal-venue">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('venue')">✕</button>
+    <div id="venue-form-wrap">
+      <span class="modal-tag venue-tag">Venue account</span>
+      <h2>List your venue</h2>
+      <div class="alert error" id="venue-error"></div>
+
+      <!-- Tier picker -->
+      <label style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--gray); font-weight:500; display:block; margin-bottom:14px;">Choose your tier</label>
+      <div class="tier-grid">
+        <div class="tier-card selected" id="tier-pro" onclick="selectTier('pro')">
+          <div class="tier-check">✓</div>
+          <h4>Pro Venue</h4>
+          <p>Full CTS dashboard, seat maps, presale codes, analytics, and the Pro scanner app.</p>
+        </div>
+        <div class="tier-card" id="tier-indie" onclick="selectTier('indie')">
+          <div class="tier-check"></div>
+          <h4>Indie Venue</h4>
+          <p>Simple event listing, basic scanner, and T4M ticketing. Perfect for smaller events.</p>
+        </div>
+      </div>
+
+      <div class="form-group"><label>Venue name</label><input type="text" id="venue-name" placeholder="The Grand Hall"></div>
+      <div class="form-group"><label>Your name</label><input type="text" id="venue-contact" placeholder="John Smith"></div>
+      <div class="form-group"><label>Business email</label><input type="email" id="venue-email" placeholder="john@yourvenue.com"></div>
+      <div class="form-group">
+        <label>Venue type</label>
+        <select id="venue-type">
+          <option value="" disabled selected>Select a type</option>
+          <option>Concert hall</option>
+          <option>Club / bar</option>
+          <option>Theatre</option>
+          <option>Outdoor / festival</option>
+          <option>Sports arena</option>
+          <option>Open house / pop-up</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Password</label><input type="password" id="venue-password" placeholder="••••••••"></div>
+      <button class="form-submit venue-submit" id="venue-submit" onclick="signUpVenue()">Create venue account →</button>
+      <div class="modal-divider"><span>or</span></div>
+      <div class="modal-switch">Looking for tickets? <a onclick="switchModal('venue','buyer')">Sign up as a fan instead</a></div>
+    </div>
+    <div class="success-screen" id="venue-success">
+      <div class="success-icon">🏟</div>
+      <h3>Application sent!</h3>
+      <p>Thanks for joining T4M. Check your email to confirm your account. Pro venues are reviewed within 24–48 hours.</p>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="modal-login">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('login')">✕</button>
+    <div id="login-form-wrap">
+      <span class="modal-tag">Welcome back</span>
+      <h2>Sign in</h2>
+      <div class="alert error" id="login-error"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="form-submit" id="login-submit" onclick="signIn()">Sign in →</button>
+      <div class="modal-divider"><span>or</span></div>
+      <div class="modal-switch">No account? <a onclick="switchModal('login','buyer')">Sign up as a fan</a> or <a onclick="switchModal('login','venue')">list a venue</a></div>
+    </div>
+    <div class="success-screen" id="login-success">
+      <div class="success-icon">✅</div>
+      <h3>Signed in!</h3>
+      <p>Welcome back to T4M.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const _SB_URL = 'https://zpfpgzwhltijokiawuhg.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZnBnendobHRpam9raWF3dWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Njk0MzYsImV4cCI6MjA5NTA0NTQzNn0.Hbq2wT0d26OmgGyP8is34NWzTa7m9JtDUcNL2lL-xUg';
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let selectedTier = 'pro';
+
+  function selectTier(tier) {
+    selectedTier = tier;
+    document.getElementById('tier-pro').classList.toggle('selected', tier === 'pro');
+    document.getElementById('tier-indie').classList.toggle('selected', tier === 'indie');
+    document.querySelector('#tier-pro .tier-check').textContent = tier === 'pro' ? '✓' : '';
+    document.querySelector('#tier-indie .tier-check').textContent = tier === 'indie' ? '✓' : '';
+  }
+
+  function openModal(type) {
+    document.getElementById('modal-' + type).classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(type) {
+    document.getElementById('modal-' + type).classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function switchModal(from, to) {
+    closeModal(from);
+    setTimeout(() => openModal(to), 200);
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function clearError(id) {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.classList.remove('show');
+  }
+  function setLoading(btnId, loading, defaultText) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait...' : defaultText;
+  }
+
+  async function signUpFan() {
+    clearError('buyer-error');
+    const name = document.getElementById('buyer-name').value.trim();
+    const email = document.getElementById('buyer-email').value.trim();
+    const phone = document.getElementById('buyer-phone').value.trim();
+    const password = document.getElementById('buyer-password').value;
+
+    if (!name || !email || !password) return showError('buyer-error', 'Please fill in all fields.');
+    if (password.length < 6) return showError('buyer-error', 'Password must be at least 6 characters.');
+
+    setLoading('buyer-submit', true, 'Create fan account →');
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name, phone, role: 'fan' } } });
+
+    if (error) { setLoading('buyer-submit', false, 'Create fan account →'); return showError('buyer-error', error.message); }
+
+    if (data.user) {
+      await sb.from('fans').insert({ id: data.user.id, full_name: name, phone });
+    }
+
+    setLoading('buyer-submit', false, 'Create fan account →');
+    document.getElementById('buyer-form-wrap').style.display = 'none';
+    document.getElementById('buyer-success').classList.add('show');
+  }
+
+  async function signUpVenue() {
+    clearError('venue-error');
+    const venueName = document.getElementById('venue-name').value.trim();
+    const contact = document.getElementById('venue-contact').value.trim();
+    const email = document.getElementById('venue-email').value.trim();
+    const venueType = document.getElementById('venue-type').value;
+    const password = document.getElementById('venue-password').value;
+
+    if (!venueName || !contact || !email || !venueType || !password) return showError('venue-error', 'Please fill in all fields.');
+    if (password.length < 6) return showError('venue-error', 'Password must be at least 6 characters.');
+
+    setLoading('venue-submit', true, 'Create venue account →');
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: contact, role: 'venue', tier: selectedTier } } });
+
+    if (error) { setLoading('venue-submit', false, 'Create venue account →'); return showError('venue-error', error.message); }
+
+    if (data.user) {
+      await sb.from('venues').insert({ id: data.user.id, venue_name: venueName, contact_name: contact, venue_type: venueType, tier: selectedTier, status: selectedTier === 'pro' ? 'pending' : 'active' });
+    }
+
+    setLoading('venue-submit', false, 'Create venue account →');
+    document.getElementById('venue-form-wrap').style.display = 'none';
+    document.getElementById('venue-success').classList.add('show');
+  }
+
+  async function signIn() {
+    clearError('login-error');
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (!email || !password) return showError('login-error', 'Please enter your email and password.');
+
+    setLoading('login-submit', true, 'Sign in →');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) { setLoading('login-submit', false, 'Sign in →'); return showError('login-error', error.message); }
+
+    setLoading('login-submit', false, 'Sign in →');
+    document.getElementById('login-form-wrap').style.display = 'none';
+    document.getElementById('login-success').classList.add('show');
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) { overlay.classList.remove('active'); document.body.style.overflow = ''; }
+    });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.active').forEach(m => { m.classList.remove('active'); document.body.style.overflow = ''; }); }
+  });
+</script>
+</body>
+</html>
