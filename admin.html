@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4M Admin — CTS Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f2ee;
+    --accent: #e8441a;
+    --accent2: #f5a623;
+    --gray: #6b6560;
+    --card-bg: #141414;
+    --border: rgba(245,242,238,0.1);
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+  body { background: var(--black); color: var(--white); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; }
+
+  /* LOGIN */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .login-box { background: var(--card-bg); border: 1px solid var(--border); padding: 48px; width: 100%; max-width: 400px; }
+  .login-box .logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; margin-bottom: 6px; display: block; }
+  .login-box .logo span { color: var(--accent); }
+  .login-box .sub { font-size: 13px; color: var(--gray); margin-bottom: 36px; display: block; letter-spacing: 2px; text-transform: uppercase; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray); margin-bottom: 8px; font-weight: 500; }
+  .form-group input { width: 100%; background: #0a0a0a; border: 1px solid var(--border); color: var(--white); padding: 13px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: rgba(245,242,238,0.2); }
+  .btn { width: 100%; background: var(--accent); color: var(--white); border: none; padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+  .btn:hover { background: #c93a16; }
+  .btn:disabled { background: #444; cursor: not-allowed; }
+  .alert { padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .alert.error { background: rgba(232,68,26,0.15); border: 1px solid rgba(232,68,26,0.4); color: #ff8a6a; }
+  .alert.show { display: block; }
+
+  /* DASHBOARD */
+  .dashboard { display: none; min-height: 100vh; }
+  .dashboard.show { display: block; }
+
+  /* TOP BAR */
+  .topbar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .topbar .logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; }
+  .topbar .logo span { color: var(--accent); }
+  .topbar-right { display: flex; align-items: center; gap: 20px; }
+  .admin-badge { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); padding: 4px 12px; }
+  .signout-btn { background: none; border: 1px solid var(--border); color: var(--gray); padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .signout-btn:hover { border-color: var(--white); color: var(--white); }
+
+  /* STATS */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); margin: 0; }
+  .stat { background: var(--card-bg); padding: 28px 32px; }
+  .stat-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; display: block; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 1px; line-height: 1; }
+  .stat-value.orange { color: var(--accent2); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  /* MAIN CONTENT */
+  .main { padding: 40px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+  .section-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; }
+  .tabs { display: flex; gap: 2px; background: var(--border); padding: 2px; }
+  .tab { padding: 8px 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; background: none; color: var(--gray); transition: all 0.2s; }
+  .tab.active { background: var(--card-bg); color: var(--white); }
+
+  /* TABLE */
+  .table-wrap { background: var(--card-bg); border: 1px solid var(--border); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray); padding: 14px 20px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap; }
+  td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(245,242,238,0.02); }
+
+  .badge { display: inline-block; padding: 3px 10px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; }
+  .badge.pending { background: rgba(245,166,35,0.15); color: var(--accent2); border: 1px solid rgba(245,166,35,0.3); }
+  .badge.active { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge.rejected { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .badge.pro { background: rgba(232,68,26,0.15); color: var(--accent); border: 1px solid rgba(232,68,26,0.3); }
+  .badge.indie { background: rgba(245,242,238,0.06); color: var(--gray); border: 1px solid var(--border); }
+
+  .action-btns { display: flex; gap: 8px; }
+  .approve-btn { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); padding: 6px 14px; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+  .approve-btn:hover { background: rgba(34,197,94,0.25); }
+  .reject-btn { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); padding: 6px 14px; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+  .reject-btn:hover { background: rgba(239,68,68,0.2); }
+
+  .empty { padding: 60px; text-align: center; color: var(--gray); font-size: 14px; }
+  .empty span { display: block; font-size: 32px; margin-bottom: 12px; }
+
+  .refresh-btn { background: none; border: 1px solid var(--border); color: var(--gray); padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .refresh-btn:hover { border-color: var(--white); color: var(--white); }
+
+  .toast { position: fixed; bottom: 32px; right: 32px; background: var(--card-bg); border: 1px solid var(--border); padding: 16px 24px; font-size: 14px; z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .toast.error { border-color: rgba(239,68,68,0.4); color: var(--red); }
+
+  @media (max-width: 768px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .main { padding: 20px; }
+    .topbar { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-box">
+    <span class="logo">T4<span>M</span></span>
+    <span class="sub">Admin access only</span>
+    <div class="alert error" id="login-error"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="admin-email" placeholder="admin@ticket4me.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="admin-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') adminLogin()">
+    </div>
+    <button class="btn" id="login-btn" onclick="adminLogin()">Sign in to admin →</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <span class="logo">T4<span>M</span> <span style="font-size:14px; color:var(--gray); letter-spacing:3px;"> CTS</span></span>
+    <div class="topbar-right">
+      <span class="admin-badge">Admin</span>
+      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats-bar">
+    <div class="stat"><span class="stat-label">Total venues</span><span class="stat-value" id="stat-total">—</span></div>
+    <div class="stat"><span class="stat-label">Pending review</span><span class="stat-value orange" id="stat-pending">—</span></div>
+    <div class="stat"><span class="stat-label">Approved</span><span class="stat-value green" id="stat-approved">—</span></div>
+    <div class="stat"><span class="stat-label">Rejected</span><span class="stat-value red" id="stat-rejected">—</span></div>
+  </div>
+
+  <div class="main">
+    <div class="section-header">
+      <h2>Venue applications</h2>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="tabs">
+          <button class="tab active" onclick="filterVenues('all', this)">All</button>
+          <button class="tab" onclick="filterVenues('pending', this)">Pending</button>
+          <button class="tab" onclick="filterVenues('active', this)">Approved</button>
+          <button class="tab" onclick="filterVenues('rejected', this)">Rejected</button>
+        </div>
+        <button class="refresh-btn" onclick="loadVenues()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Venue name</th>
+            <th>Contact</th>
+            <th>Type</th>
+            <th>Tier</th>
+            <th>Status</th>
+            <th>Signed up</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="venues-table">
+          <tr><td colspan="7" class="empty"><span>⏳</span>Loading venues...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FANS SECTION -->
+    <div style="margin-top: 48px;">
+      <div class="section-header">
+        <h2>Fan accounts</h2>
+        <button class="refresh-btn" onclick="loadFans()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="fans-table">
+            <tr><td colspan="3" class="empty"><span>⏳</span>Loading fans...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://zpfpgzwhltijokiawuhg.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwZnBnendobHRpam9raWF3dWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0Njk0MzYsImV4cCI6MjA5NTA0NTQzNn0.Hbq2wT0d26OmgGyP8is34NWzTa7m9JtDUcNL2lL-xUg';
+  const ADMIN_UID = 'b0cab51f-a77c-4659-a32b-ee81c13f142f';
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let allVenues = [];
+  let currentFilter = 'all';
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  async function adminLogin() {
+    const email = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errEl.textContent = error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Sign in to admin →';
+      return;
+    }
+
+    if (data.user.id !== ADMIN_UID) {
+      await sb.auth.signOut();
+      errEl.textContent = 'Access denied. This page is for admins only.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Sign in to admin →';
+      return;
+    }
+
+    showDashboard();
+  }
+
+  async function signOut() {
+    await sb.auth.signOut();
+    document.getElementById('dashboard').classList.remove('show');
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('admin-password').value = '';
+  }
+
+  function showDashboard() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').classList.add('show');
+    loadVenues();
+    loadFans();
+  }
+
+  async function loadVenues() {
+    const tbody = document.getElementById('venues-table');
+    tbody.innerHTML = '<tr><td colspan="7" class="empty"><span>⏳</span>Loading...</td></tr>';
+
+    const { data, error } = await sb.from('venues').select('*').order('created_at', { ascending: false });
+
+    if (error) { tbody.innerHTML = '<tr><td colspan="7" class="empty"><span>⚠️</span>Error loading venues.</td></tr>'; return; }
+
+    allVenues = data || [];
+    updateStats();
+    renderVenues(currentFilter);
+  }
+
+  async function loadFans() {
+    const tbody = document.getElementById('fans-table');
+    tbody.innerHTML = '<tr><td colspan="3" class="empty"><span>⏳</span>Loading...</td></tr>';
+
+    const { data, error } = await sb.from('fans').select('*').order('created_at', { ascending: false });
+
+    if (error) { tbody.innerHTML = '<tr><td colspan="3" class="empty"><span>⚠️</span>Error loading fans.</td></tr>'; return; }
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty"><span>👥</span>No fan signups yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(f => `
+      <tr>
+        <td>${f.full_name || '—'}</td>
+        <td style="color:var(--gray)">${f.phone || '—'}</td>
+        <td style="color:var(--gray)">${formatDate(f.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function updateStats() {
+    document.getElementById('stat-total').textContent = allVenues.length;
+    document.getElementById('stat-pending').textContent = allVenues.filter(v => v.status === 'pending').length;
+    document.getElementById('stat-approved').textContent = allVenues.filter(v => v.status === 'active').length;
+    document.getElementById('stat-rejected').textContent = allVenues.filter(v => v.status === 'rejected').length;
+  }
+
+  function filterVenues(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderVenues(filter);
+  }
+
+  function renderVenues(filter) {
+    const tbody = document.getElementById('venues-table');
+    const venues = filter === 'all' ? allVenues : allVenues.filter(v => v.status === filter);
+
+    if (venues.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty"><span>✅</span>No ${filter === 'all' ? '' : filter} venues found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = venues.map(v => `
+      <tr>
+        <td><strong>${v.venue_name || '—'}</strong></td>
+        <td style="color:var(--gray)">${v.contact_name || '—'}</td>
+        <td style="color:var(--gray)">${v.venue_type || '—'}</td>
+        <td><span class="badge ${v.tier}">${v.tier === 'pro' ? 'Pro' : 'Indie'}</span></td>
+        <td><span class="badge ${v.status}">${v.status}</span></td>
+        <td style="color:var(--gray)">${formatDate(v.created_at)}</td>
+        <td>
+          ${v.status === 'pending' ? `
+            <div class="action-btns">
+              <button class="approve-btn" onclick="updateVenue('${v.id}', 'active')">✓ Approve</button>
+              <button class="reject-btn" onclick="updateVenue('${v.id}', 'rejected')">✕ Reject</button>
+            </div>
+          ` : v.status === 'active' ? `
+            <div class="action-btns">
+              <button class="reject-btn" onclick="updateVenue('${v.id}', 'rejected')">Revoke</button>
+            </div>
+          ` : `
+            <div class="action-btns">
+              <button class="approve-btn" onclick="updateVenue('${v.id}', 'active')">Reinstate</button>
+            </div>
+          `}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function updateVenue(id, status) {
+    const { error } = await sb.from('venues').update({ status }).eq('id', id);
+    if (error) { showToast('Error updating venue', 'error'); return; }
+    const label = status === 'active' ? 'Venue approved ✓' : status === 'rejected' ? 'Venue rejected' : 'Venue updated';
+    showToast(label, status === 'active' ? 'success' : 'error');
+    await loadVenues();
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Check if already logged in
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session && data.session.user.id === ADMIN_UID) showDashboard();
+  });
+</script>
+</body>
+</html>
